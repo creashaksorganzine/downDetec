@@ -1,6 +1,7 @@
 import time
 import network
 import socket
+import json
 from machine import Pin
 
 # ssid = ''
@@ -167,6 +168,19 @@ def log_status(dtg, status):
 def get_status():
     return "Up" if wlan.isconnected() else "Down"
 
+def save_log():
+    with open('log.json', 'w') as f:
+        json.dump(status_log, f)
+
+def load_log():
+    try:
+        with open('log.json', 'r') as f:
+            return json.load(f)
+    except:
+        return []
+
+status_log = load_log()
+
 def serve_client(cl):
     request = cl.recv(1024)
     print("request:")
@@ -182,6 +196,7 @@ def serve_client(cl):
     dtg = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
     status = get_status()
     log_status(dtg, status)
+    save_log()
 
     log_rows = "\n".join(status_log[-10:])  # Show the last 10 status logs
 
