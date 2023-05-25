@@ -1,0 +1,20 @@
+{
+    "log": [
+        {
+        "date": "2023-05-01 10:15:23",
+        "status": "Up"
+        },
+        {
+        "date": "2023-05-01 11:20:57",
+        "status": "Down"
+        },
+        {
+        "date": "2023-05-02 09:45:12",
+        "status": "Up"
+        },
+        {
+            "date": "2023-05-02 09:45:12",
+            "status": "Up/THESE ARE ONLY  EXAMPLES"
+        }
+        ]
+}
