@@ -1,4 +1,25 @@
-<!DOCTYPE html>
+import time
+import network
+import socket
+from machine import Pin
+
+# ssid = ''
+# password = ''
+
+# Load Wi-Fi credentials from .secret.env
+with open('.secret.env') as f:
+    for line in f:
+        key, value = line.strip().split('=')
+        if key == 'SSID':
+            ssid = value
+        elif key == 'PASSWORD':
+            password = value
+
+wlan = network.WLAN(network.STA_IF)
+wlan.active(True)
+wlan.connect(ssid, password)
+
+html = """<!DOCTYPE html>
 <html>
 <head>
     <title>Wi-Fi Status</title>
@@ -126,3 +147,80 @@
     </table>
 </body>
 </html>
+"""
+
+# Load Wi-Fi credentials from .secret.env
+with open('.secret.env') as f:
+    for line in f:
+        key, value = line.strip().split('=')
+        if key == 'SSID':
+            ssid = value
+        elif key == 'PASSWORD':
+            password = value
+
+log_row = "<tr><td>%s</td><td>%s</td></tr>"
+status_log = []
+
+def log_status(dtg, status):
+    status_log.append(log_row % (dtg, status))
+
+def get_status():
+    return "Up" if wlan.isconnected() else "Down"
+
+def serve_client(cl):
+    request = cl.recv(1024)
+    print("request:")
+    print(request)
+
+    refresh_rate = 5  # Default refresh rate
+    if "refresh_rate" in request:
+        try:
+            refresh_rate = int(request.split(b'refresh_rate=')[1].split(b' ')[0])
+        except:
+            pass
+
+    dtg = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+    status = get_status()
+    log_status(dtg, status)
+
+    log_rows = "\n".join(status_log[-10:])  # Show the last 10 status logs
+
+    # Create and send response
+    response = html % (refresh_rate, log_rows)
+    cl.send('HTTP/1.0 200 OK\r\nContent-type: text/html\r\n\r\n')
+    cl.send(response)
+    cl.close()
+
+# Wait for connect or fail
+max_wait = 10
+while max_wait > 0:
+    if wlan.status() < 0 or wlan.status() >= 3:
+        break
+    max_wait -= 1
+    print('waiting for connection...')
+    time.sleep(1)
+
+# Handle connection error
+if wlan.status() != 3:
+    raise RuntimeError('network connection failed')
+else:
+    print('Connected')
+    status = wlan.ifconfig()
+    print('ip = ' + status[0])
+
+# Open socket
+addr = socket.getaddrinfo('0.0.0.0', 80)[0][-1]
+s = socket.socket()
+s.bind(addr)
+s.listen(1)
+print('listening on', addr)
+
+# Listen for connections, serve client
+while True:
+    try:
+        cl, addr = s.accept()
+        print('client connected from', addr)
+        serve_client(cl)
+    except OSError as e:
+        cl.close()
+        print('connection closed')
